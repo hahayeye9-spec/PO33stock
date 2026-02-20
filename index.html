@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#007bff">
+    <title>庫存銷售計算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+        body {
+            background: #f8f9fa;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        h1 {
+            text-align: center;
+            margin: 12px 0 20px;
+            font-size: 22px;
+            color: #333;
+        }
+        .container {
+            overflow-x: auto;
+            margin-bottom: 130px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            background: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 15px;
+        }
+        th {
+            background: #007bff;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        input {
+            width: 100%;
+            padding: 10px 8px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+        }
+        .qty-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .qty-btn {
+            width: 44px;
+            height: 44px;
+            font-size: 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qty-btn.minus { background: #dc3545; }
+        .qty-btn.plus  { background: #28a745; }
+        .quantity {
+            width: 72px;
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .del-btn {
+            padding: 10px 16px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .action-bar {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .action-bar button {
+            padding: 14px 24px;
+            font-size: 17px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            min-width: 140px;
+        }
+        #addRow { background: #007bff; color: white; }
+        #clearAll { background: #6c757d; color: white; }
+        .total-sales {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.95);
+            border: 2px solid #007bff;
+            padding: 14px 28px;
+            border-radius: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 6px 20px rgba(0,123,255,0.25);
+            z-index: 100;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+        }
+        .soh-warning {
+            color: #ff4757 !important;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .save-notice {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #28a745;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 200;
+            pointer-events: none;
+        }
+        @media screen and (max-width: 480px) {
+            h1 { font-size: 20px; margin: 10px 0 16px; }
+            th, td { padding: 10px 6px; font-size: 14px; }
+            .qty-btn { width: 40px; height: 40px; font-size: 22px; }
+            .quantity { width: 64px; }
+            .del-btn { padding: 8px 12px; font-size: 14px; }
+            .total-sales { font-size: 18px; padding: 12px 22px; bottom: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>📱 庫存銷售計算器</h1>
+
+<div class="container">
+    <table id="itemTable">
+        <thead>
+            <tr>
+                <th>品名</th>
+                <th>數量</th>
+                <th>單價</th>
+                <th>銷售額</th>
+                <th>庫存</th>
+                <th>SOH</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="item-row">
+                <td><input type="text" class="item" placeholder="品名"></td>
+                <td>
+                    <div class="qty-box">
+                        <button class="qty-btn minus">-</button>
+                        <input type="number" class="quantity" value="0" readonly>
+                        <button class="qty-btn plus">+</button>
+                    </div>
+                </td>
+                <td><input type="number" class="price" placeholder="0" step="0.01"></td>
+                <td class="sales">0.00</td>
+                <td><input type="number" class="stock" placeholder="0"></td>
+                <td class="soh">0</td>
+                <td><button class="del-btn">刪除</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="action-bar">
+    <button id="addRow">➕ 新增一行</button>
+    <button id="clearAll">🗑 清空全部</button>
+</div>
+
+<div class="total-sales">
+    總銷售額：HK$ <span id="totalSales">0.00</span>
+</div>
+
+<div class="save-notice" id="saveNotice">✅ 已自動儲存</div>
+
+<script>
+    // ==================== 儲存 / 載入功能 ====================
+    function saveData() {
+        const rows = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            const item  = row.querySelector('.item').value.trim();
+            const qty   = parseInt(row.querySelector('.quantity').value) || 0;
+            const price = parseFloat(row.querySelector('.price').value) || 0;
+            const stock = parseInt(row.querySelector('.stock').value) || 0;
+            rows.push({ item, qty, price, stock });
+        });
+        localStorage.setItem('inventoryData', JSON.stringify(rows));
+        
+        // 顯示「已自動儲存」提示（0.8秒後消失）
+        const notice = document.getElementById('saveNotice');
+        notice.style.opacity = '1';
+        notice.style.transform = 'translateX(-50%) translateY(-8px)';
+        setTimeout(() => {
+            notice.style.opacity = '0';
+            notice.style.transform = 'translateX(-50%)';
+        }, 800);
+    }
+
+    function loadData() {
+        const saved = localStorage.getItem('inventoryData');
+        if (!saved) return;
+
+        let data;
+        try { data = JSON.parse(saved); } catch(e) { return; }
+
+        if (!data || data.length === 0) return;
+
+        const tbody = document.querySelector('#itemTable tbody');
+        tbody.innerHTML = '';   // 清空現有行
+
+        data.forEach(d => {
+            const newRow = document.createElement('tr');
+            newRow.className = 'item-row';
+            newRow.innerHTML = `
+                <td><input type="text" class="item" placeholder="品名" value="${(d.item || '').replace(/"/g, '&quot;')}"></td>
+                <td>
+                    <div class="qty-box">
+                        <button class="qty-btn minus">-</button>
+                        <input type="number" class="quantity" value="${d.qty}" readonly>
+                        <button class="qty-btn plus">+</button>
+                    </div>
+                </td>
+                <td><input type="number" class="price" placeholder="0" step="0.01" value="${d.price}"></td>
+                <td class="sales">0.00</td>
+                <td><input type="number" class="stock" placeholder="0" value="${d.stock}"></td>
+                <td class="soh">0</td>
+                <td><button class="del-btn">刪除</button></td>
+            `;
+            tbody.appendChild(newRow);
+            calcRow(newRow);   // 立即計算銷售額與SOH
+        });
+
+        updateTotal();
+    }
+
+    // ==================== 原有功能 ====================
+    document.addEventListener('click', function (e) {
+        const row = e.target.closest('.item-row');
+        if (!row) return;
+
+        if (e.target.classList.contains('plus')) {
+            const qty = row.querySelector('.quantity');
+            qty.value = parseInt(qty.value || 0) + 1;
+            calcRow(row);
+            updateTotal();
+            saveData();
+        }
+
+        if (e.target.classList.contains('minus')) {
+            const qty = row.querySelector('.quantity');
+            let val = parseInt(qty.value || 0);
+            if (val > 0) val--;
+            qty.value = val;
+            calcRow(row);
+            updateTotal();
+            saveData();
+        }
+
+        if (e.target.classList.contains('del-btn')) {
+            const allRows = document.querySelectorAll('.item-row');
+            if (allRows.length > 1) {
+                row.remove();
+                updateTotal();
+                saveData();
+            } else {
+                alert('至少要保留一行哦～');
+            }
+        }
+    });
+
+    // 品名、單價、庫存改變時自動儲存
+    document.addEventListener('input', function (e) {
+        const row = e.target.closest('.item-row');
+        if (!row) return;
+
+        if (['item','price','stock'].some(cls => e.target.classList.contains(cls))) {
+            if (e.target.classList.contains('price') || e.target.classList.contains('stock')) {
+                calcRow(row);
+            }
+            updateTotal();
+            saveData();
+        }
+    });
+
+    // 新增一行
+    document.getElementById('addRow').addEventListener('click', function () {
+        const tbody = document.querySelector('#itemTable tbody');
+        const newRow = document.createElement('tr');
+        newRow.className = 'item-row';
+        newRow.innerHTML = `
+            <td><input type="text" class="item" placeholder="品名"></td>
+            <td>
+                <div class="qty-box">
+                    <button class="qty-btn minus">-</button>
+                    <input type="number" class="quantity" value="0" readonly>
+                    <button class="qty-btn plus">+</button>
+                </div>
+            </td>
+            <td><input type="number" class="price" placeholder="0" step="0.01"></td>
+            <td class="sales">0.00</td>
+            <td><input type="number" class="stock" placeholder="0"></td>
+            <td class="soh">0</td>
+            <td><button class="del-btn">刪除</button></td>
+        `;
+        tbody.appendChild(newRow);
+        saveData();   // 新增後立即儲存
+    });
+
+    // 清空全部（同時清除本地儲存）
+    document.getElementById('clearAll').addEventListener('click', function () {
+        if (!confirm('確定要清空所有資料並清除儲存嗎？')) return;
+        
+        document.querySelector('#itemTable tbody').innerHTML = `
+            <tr class="item-row">
+                <td><input type="text" class="item" placeholder="品名"></td>
+                <td>
+                    <div class="qty-box">
+                        <button class="qty-btn minus">-</button>
+                        <input type="number" class="quantity" value="0" readonly>
+                        <button class="qty-btn plus">+</button>
+                    </div>
+                </td>
+                <td><input type="number" class="price" placeholder="0" step="0.01"></td>
+                <td class="sales">0.00</td>
+                <td><input type="number" class="stock" placeholder="0"></td>
+                <td class="soh">0</td>
+                <td><button class="del-btn">刪除</button></td>
+            </tr>
+        `;
+        localStorage.removeItem('inventoryData');   // 徹底清除儲存
+        updateTotal();
+    });
+
+    // 單行計算
+    function calcRow(row) {
+        const qty = parseInt(row.querySelector('.quantity').value) || 0;
+        const price = parseFloat(row.querySelector('.price').value) || 0;
+        const stock = parseInt(row.querySelector('.stock').value) || 0;
+
+        const sales = (qty * price).toFixed(2);
+        const soh = stock - qty;
+
+        row.querySelector('.sales').textContent = sales;
+        const sohCell = row.querySelector('.soh');
+        sohCell.textContent = soh;
+
+        if (soh < 0) {
+            sohCell.classList.add('soh-warning');
+        } else {
+            sohCell.classList.remove('soh-warning');
+        }
+    }
+
+    // 總計
+    function updateTotal() {
+        let total = 0;
+        document.querySelectorAll('.sales').forEach(cell => {
+            total += parseFloat(cell.textContent) || 0;
+        });
+        document.getElementById('totalSales').textContent = total.toFixed(2);
+    }
+
+    // ==================== 啟動時自動載入 ====================
+    window.addEventListener('load', () => {
+        loadData();
+        updateTotal();
+    });
+</script>
+
+</body>
+</html>
